@@ -2,12 +2,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <math.h>
+#include <limits.h>
 #include "linalg.h"
 #include "linalg.cpp"
 
 #define _USE_MATH_DEFINES
 
-#define FINPNAME "val.txt"
+#define FINPNAME "vals.txt"
+#define FOUTNAME "res.txt"
 #define Q_PARAM 7
 #define DEFQSTEPS 10
 
@@ -31,10 +33,12 @@ int main(int argc, char ** argv)
 	{
 	try
 		{
-		FILE* finp = fopen(FINPNAME, "r");
+		const char* finpname = FINPNAME;
+		if(argc > 2) finpname = argv[2];
+		FILE* finp = fopen(finpname, "r");
 		if(!finp)
 			{
-			printf("Can't open %s\n", FINPNAME);
+			printf("Can't open %s\n", finpname);
 			throw;
 			}
 		double l = 0, lambda = 0, g = 0, b = 0, omega = 0, u_o = 0, v_o;
@@ -50,13 +54,19 @@ int main(int argc, char ** argv)
 b = %lf\n omega = %lf\n u_0 = %lf\n v_0 = %lf\n========\n",  l, lambda, g, b, omega, u_o, v_o);
 		
 		long steps = DEFQSTEPS;
-
+		
 		if (argc > 1)
 			{
-			steps = strtol(argv[1], NULL, 10);
-			if (errno == ERANGE)
+			char* endptr;
+			steps = strtol(argv[1], &endptr, 10);
+			if ((errno == ERANGE) && (steps == LONG_MAX || steps == LONG_MIN))
 				{
 				printf("Bad argument: out of range\n");
+				throw;
+				}
+			if(endptr == argv[1])
+				{
+				printf("Bad argument: First argument must be number of steps. No digits found\n");
 				throw;
 				}
 			if(steps < 1)
@@ -78,7 +88,9 @@ b = %lf\n omega = %lf\n u_0 = %lf\n v_0 = %lf\n========\n",  l, lambda, g, b, om
 		
 		matrix<double> result (steps, 2);	
 
-
+/************************************************
+ * Euler method
+************************************************/
 		vector<double> y(2);
 		y[0] = v_o;
 		y[1] = u_o;
@@ -102,7 +114,9 @@ b = %lf\n omega = %lf\n u_0 = %lf\n v_0 = %lf\n========\n",  l, lambda, g, b, om
 			}
 		percent = int(steps * 1.0 / steps * 100);
 		printf("\b\b\b\b%02d%%", percent);
-
+/************************************************
+ * Runge–Kutta method
+************************************************/
 		printf("\nRunge-Kutta:\n");
 
 		y[0] = v_o;
@@ -112,7 +126,6 @@ b = %lf\n omega = %lf\n u_0 = %lf\n v_0 = %lf\n========\n",  l, lambda, g, b, om
 
 		vector<double> k1 (2), k2 (2), k3 (2), k4(2);
 		
-
 		for(long i = 1; i < steps; i++)
 			{
 			percent = int(i * 1.0 / steps * 100);
@@ -124,22 +137,31 @@ b = %lf\n omega = %lf\n u_0 = %lf\n v_0 = %lf\n========\n",  l, lambda, g, b, om
 			y = y + (k1 + k2 * 2.0 + k3 * 2.0 + k4) * (1.0 / 6.0);
 			t += tau;
 			result[i][1] = y[1];
-			printf("\b\b\b%02d%%", percent);
+			printf("\b\b\b\b%02d%%", percent);
 			fflush(stdout);
 			}
 		percent = int(steps * 1.0 / steps * 100);
 		printf("\b\b\b\b%02d%%\n\n", percent);
 		
 
+
+		const char* foutname = FOUTNAME;
+		if(argc > 3)foutname = argv[3];
+
+		FILE* fout = fopen(foutname, "w");
+
 		t = 0;
 		for(long i = 1; i < steps; i++)
 			{
-			printf("t = %.10f EE: u = %.10f   RK: u = %.10f\n", t, result[i][0], 
+			fprintf(fout, "t = %.10f EE: u = %.10f   RK: u = %.10f\n", t, result[i][0], 
 									result[i][1]);
 			t += tau;
 			}
+		
+		printf("Result is written in %s\n", foutname);
 
 		fclose(finp);
+		fclose(fout);
 		return 0;
 		}
 	catch(...)
