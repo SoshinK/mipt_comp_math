@@ -4,7 +4,7 @@ CC=g++
 CCFLAGS=-Wall -Werror -std=c++11
 LDFLAGS=-lm
 
-MAIN=task.cpp
+MAIN=611_Soshin.cpp
 
 DEPS=linalg.h linalg.cpp
 
